@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기억력 쑥쑥 & 순발력 번쩍 게임</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        /* CSS 시작 */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            /* 파스텔톤 그라데이션 배경 */
+            background: linear-gradient(135deg, #e0f7fa, #c8e6c9); /* 하늘색에서 연두색으로 */
+            color: #333;
+            overflow: hidden;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        #app {
+            width: 100%;
+            /* 캔버스 영역을 넓게 늘리기 위해 max-width를 420px에서 600px로 증가 */
+            max-width: 600px; 
+            /* 앱 배경도 부드러운 파스텔톤으로 */
+            background-color: #fcfcfc; 
+            border-radius: 20px; /* 모서리 더 둥글게 */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* 그림자 강화 */
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative; /* 자식 요소의 absolute 위치 지정을 위해 추가 */
+        }
+
+        /* 화면 전환 */
+        .screen {
+            display: none;
+            padding: 25px; /* 패딩 증가 */
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 홈 화면 스타일 */
+        #home-screen h1 {
+            color: #6a0dad; /* 보라색 계열로 변경 */
+            margin-bottom: 30px;
+            font-size: 2.2em; /* 폰트 크기 증가 */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05); /* 텍스트 그림자 추가 */
+        }
+
+        .game-selection-buttons { 
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* 간격 증가 */
+            width: 85%; /* 너비 증가 */
+            max-width: 350px; /* 최대 너비 증가 */
+        }
+
+        .difficulty-buttons, .game-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 18px; /* 간격 증가 */
+            width: 85%; 
+            max-width: 350px;
+        }
+        
+        .difficulty-buttons button, 
+        .game-selection-buttons button,
+        #memory-restart-button, #memory-home-button,
+        #reaction-restart-button, #reaction-home-button,
+        .gugudan-option-button, /* 구구단 버튼 추가 */
+        #gugudan-restart-button, #gugudan-home-button /* 구구단 다시 시작, 홈 버튼 추가 */
+        {
+            padding: 20px 28px; /* 패딩 증가 */
+            font-size: 1.4em; /* 폰트 크기 증가 */
+            font-weight: bold;
+            color: #fff;
+            /* 파스텔 그라데이션 버튼 스타일 */
+            background-image: linear-gradient(45deg, #a7e9af, #88d4ab); /* 연두색 그라데이션 */
+            border: none;
+            border-radius: 12px; /* 모서리 더 둥글게 */
+            cursor: pointer;
+            transition: all 0.3s ease; /* 전환 효과 강화 */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* 그림자 강화 */
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .difficulty-buttons button:hover, 
+        .game-selection-buttons button:hover,
+        #memory-restart-button:hover, #memory-home-button:hover,
+        #reaction-restart-button:hover, #reaction-home-button:hover,
+        .gugudan-option-button:hover,
+        #gugudan-restart-button:hover, #gugudan-home-button:hover
+        {
+            background-image: linear-gradient(45deg, #88d4ab, #62b398); /* 호버 시 색상 변경 */
+            transform: translateY(-4px) scale(1.02); /* 살짝 커지면서 위로 */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+        }
+        .difficulty-buttons button:active, 
+        .game-selection-buttons button:active,
+        #memory-restart-button:active, #memory-home-button:active,
+        #reaction-restart-button:active, #reaction-home-button:active,
+        .gugudan-option-button:active,
+        #gugudan-restart-button:active, #gugudan-home-button:active
+        {
+            transform: translateY(0px) scale(1); /* 원래 크기로 돌아오면서 아래로 */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 게임 화면 공통 스타일 */
+        .game-screen-common {
+            justify-content: flex-start;
+            padding-top: 25px; /* 패딩 증가 */
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .game-screen-common h2 {
+            color: #6a0dad; /* 보라색 계열로 변경 */
+            margin-bottom: 25px; /* 마진 증가 */
+            font-size: 2em; /* 폰트 크기 증가 */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* 순발력 게임 제목 h2 숨기기 */
+        #reaction-game-title {
+            display: none;
+        }
+
+        .game-canvas-common {
+            display: block;
+            background-color: #f4f8f9; /* 더 밝은 배경색 */
+            border-radius: 15px; /* 둥근 모서리 증가 */
+            box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.1); /* 그림자 강화 */
+            margin: 0 auto 25px auto; /* 마진 증가 */
+            max-width: calc(100% - 50px); /* 패딩 고려 너비 조절 */
+            touch-action: manipulation;
+        }
+
+        .game-info-common {
+            margin-top: auto;
+            padding: 15px 25px 25px 25px; /* 패딩 증가 */
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            /* 문구가 없어져서 버튼만 남으므로 가운데 정렬로 변경 */
+            justify-content: center; 
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px; /* 간격 증가 */
+        }
+
+        .game-info-common p {
+            font-size: 1.3em; /* 폰트 크기 증가 */
+            font-weight: bold;
+            color: #555;
+            margin: 0;
+        }
+
+        /* 이전 "뒤집은 카드" 문구 관련 CSS는 더 이상 필요 없으므로 삭제 */
+        /* #memory-game-screen .game-info-common p:first-child {
+            margin-left: 20px;
+        } */
+
+        .game-buttons-common {
+            display: flex;
+            gap: 12px; /* 간격 증가 */
+            margin-top: 0; /* 문구가 사라지면서 기본 마진 제거 (필요에 따라 조절) */
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* 순발력 게임 플레이 영역 */
+        #reaction-game-play-area {
+            display: none; 
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            position: relative; /* 오버레이를 이 요소 기준으로 절대 위치시키기 위해 추가 */
+        }
+
+        /* 순발력 게임 - 시작 전 오버레이 (안내 & 카운트다운) */
+        #reaction-pre-game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.95); /* 더 불투명하게 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            /* 기본 폰트 크기 유지 */
+            font-size: 2.8em; 
+            font-weight: bold;
+            color: #333;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+            border-radius: 15px; /* 둥근 모서리 증가 */
+            display: none; 
+        }
+
+        #reaction-instruction-text {
+            /* 기존 font-size: 0.8em; 에서 절반인 0.4em로 변경 */
+            font-size: 0.4em; /* 안내 글자 크기 조정 */
+            margin-bottom: 25px; /* 마진 증가 */
+            color: #4CAF50; /* 색상 유지 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px; /* 간격 증가 */
+        }
+        #reaction-instruction-text .emoji-display {
+            font-size: 3.5em; /* 이모지 크기 증가 */
+        }
+
+        #reaction-countdown-text {
+            font-size: 3em; /* '시작!' 글자 크기 증가 */
+            color: #8A2BE2; /* 보라색 계열로 변경 */
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.25);
+        }
+
+        /* 구구단 게임 스타일 */
+        #gugudan-question-number {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 15px;
+            margin-top: 10px; /* 상단에 좀 더 여유 공간 */
+        }
+
+        #gugudan-problem {
+            font-size: 3em; /* 문제 글자 크기 */
+            color: #6a0dad;
+            margin-bottom: 30px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+        
+        /* 구구단 보기 버튼 컨테이너 */
+        #gugudan-options {
+            display: flex;
+            flex-direction: row; /* 2x2 레이아웃을 위해 명시적으로 row 설정 */
+            flex-wrap: wrap; /* 버튼이 다음 줄로 넘어갈 수 있도록 허용 */
+            justify-content: center; /* 가로 중앙 정렬 */
+            gap: 15px; /* 버튼 사이 간격 */
+            width: 90%; /* 부모에 따라 너비 조절 */
+            max-width: 400px; /* 최대 너비 설정 */
+            margin-bottom: 30px; /* 아래 여백 추가 */
+        }
+
+        /* 구구단 보기 버튼 개별 스타일 */
+        .gugudan-option-button {
+            flex: 1 1 calc(50% - 15px); /* 한 줄에 두 개씩 (간격 고려) */
+            max-width: calc(50% - 15px); /* 최대 너비로 강제 */
+            box-sizing: border-box; /* 패딩, 보더가 너비에 포함되도록 */
+            padding: 20px; /* 패딩 증가 */
+            font-size: 1.8em; /* 폰트 크기 증가 */
+            background-image: linear-gradient(45deg, #a7e9af, #88d4ab); /* 연두색 그라데이션 */
+            border-radius: 12px; /* 모서리 둥글게 */
+        }
+
+        /* 클릭 피드백 텍스트를 위한 스타일 */
+        .gugudan-feedback-text {
+            position: absolute;
+            font-size: 2.2em; /* 피드백 텍스트 크기 */
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            transform: translateY(0px);
+            pointer-events: none; /* 클릭 이벤트 무시 */
+            z-index: 10; /* 다른 요소 위에 표시 */
+            white-space: nowrap; /* 텍스트 줄바꿈 방지 */
+        }
+        /* 커스텀 모달 스타일 */
+        .custom-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* 배경 더 어둡게 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 35px; /* 패딩 증가 */
+            border-radius: 20px; /* 둥근 모서리 증가 */
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25); /* 그림자 강화 */
+            max-width: 85%; /* 최대 너비 증가 */
+            animation: fadeInScale 0.3s ease-out; /* 모달 등장 애니메이션 */
+        }
+        
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-content h3 {
+            color: #6a0dad; /* 보라색 계열로 변경 */
+            font-size: 1.8em; /* 폰트 크기 증가 */
+            margin-bottom: 15px;
+        }
+
+        .modal-content p {
+            font-size: 1.6em; /* 폰트 크기 증가 */
+            margin-bottom: 25px; /* 마진 증가 */
+            color: #555;
+            line-height: 1.4; /* 줄 간격 조절 */
+        }
+
+        .modal-close-button {
+            padding: 15px 30px; /* 패딩 증가 */
+            font-size: 1.2em; /* 폰트 크기 증가 */
+            font-weight: bold;
+            color: #fff;
+            /* 모달 버튼도 파스텔 그라데이션 */
+            background-image: linear-gradient(45deg, #87ceeb, #add8e6); /* 연한 파랑 그라데이션 */
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-close-button:hover {
+            background-image: linear-gradient(45deg, #6bbde2, #87ceeb); /* 호버 시 색상 변경 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        /* CSS 끝 */
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 홈 화면 -->
+        <div id="home-screen" class="screen active">
+            <h1>재미있는 두뇌 게임</h1>
+            <p>원하는 게임을 선택해 주세요!</p>
+            <div class="game-selection-buttons">
+                <button data-game-type="memory">기억력 쑥쑥 카드 뒤집기</button>
+                <button data-game-type="reaction">순발력 번쩍 카드 클릭</button>
+                <button data-game-type="gugudan">구구단 게임</button> <!-- 구구단 게임 버튼 추가 -->
+            </div>
+        </div>
+
+        <!-- 기억력 게임 화면 -->
+        <div id="memory-game-screen" class="screen game-screen-common">
+            <h2 id="memory-game-title"></h2>
+            <div class="difficulty-buttons">
+                <button data-difficulty="easy">가장 쉬움</button>
+                <button data-difficulty="medium">중간</button>
+                <button data-difficulty="hard">어려움</button>
+            </div>
+            <!-- 캔버스는 난이도 선택 후 동적으로 설정됨 -->
+            <canvas id="memory-game-canvas" class="game-canvas-common"></canvas>
+            <div class="game-info-common">
+                <!-- '뒤집은 카드' 문구가 여기서 삭제되었습니다. -->
+                <div class="game-buttons-common">
+                    <button id="memory-restart-button">다시 시작</button>
+                    <button id="memory-home-button">홈으로</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 순발력 게임 화면 -->
+        <div id="reaction-game-screen" class="screen game-screen-common">
+            <h2 id="reaction-game-title"></h2> <!-- 이 H2 태그의 내용이 CSS로 숨겨집니다. -->
+            <!-- 순발력 게임 난이도 버튼 -->
+            <div class="difficulty-buttons" id="reaction-difficulty-selection">
+                <button data-difficulty="easy">쉬움</button>
+                <button data-difficulty="medium">보통</button>
+                <button data-difficulty="hard">어려움</button>
+            </div>
+            <!-- 순발력 게임 플레이 영역 -->
+            <div id="reaction-game-play-area">
+                <canvas id="reaction-game-canvas" class="game-canvas-common"></canvas>
+                <!-- 시작 전 안내 및 카운트다운 오버레이 -->
+                <div id="reaction-pre-game-overlay">
+                    <div id="reaction-instruction-text">
+                        <span class="emoji-display">⭐</span>
+                        <span>별 모양만 눌러주세요!</span>
+                    </div>
+                    <div id="reaction-countdown-text" style="display:none;"></div>
+                </div>
+                <div class="game-info-common">
+                    <p>성공: <span id="reaction-score">0</span> / 목표: <span id="reaction-target-clicks">20</span></p>
+                    <p>시도: <span id="reaction-attempts">0</span></p>
+                    <div class="game-buttons-common">
+                        <button id="reaction-restart-button">다시 시작</button>
+                        <button id="reaction-home-button">홈으로</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 구구단 게임 화면 -->
+        <div id="gugudan-game-screen" class="screen game-screen-common">
+            <p id="gugudan-question-number">문제 1/20</p>
+            <h2 id="gugudan-problem"></h2>
+            <!-- 구구단 피드백 텍스트는 이제 동적으로 생성됩니다. -->
+            <div id="gugudan-options" class="game-buttons">
+                <button class="gugudan-option-button"></button>
+                <button class="gugudan-option-button"></button>
+                <button class="gugudan-option-button"></button>
+                <button class="gugudan-option-button"></button>
+            </div>
+            <div class="game-info-common">
+                <div class="game-buttons-common">
+                    <button id="gugudan-restart-button">다시 시작</button>
+                    <button id="gugudan-home-button">홈으로</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript 시작
+
+        // --- DOM 요소 가져오기 ---
+        const homeScreen = document.getElementById('home-screen');
+        const gameSelectionButtons = document.querySelector('.game-selection-buttons');
+
+        // 기억력 게임 요소
+        const memoryGameScreen = document.getElementById('memory-game-screen');
+        const memoryDifficultyButtons = memoryGameScreen.querySelector('.difficulty-buttons');
+        const memoryGameTitle = document.getElementById('memory-game-title');
+        const memoryGameCanvas = document.getElementById('memory-game-canvas');
+        const memoryCtx = memoryGameCanvas.getContext('2d');
+        const memoryRestartButton = document.getElementById('memory-restart-button');
+        const memoryHomeButton = document.getElementById('memory-home-button');
+        const memoryGameInfo = memoryGameScreen.querySelector('.game-info-common'); // 새로 추가: 기억력 게임 정보 섹션
+
+        // 순발력 게임 요소
+        const reactionGameScreen = document.getElementById('reaction-game-screen');
+        const reactionDifficultyButtons = document.getElementById('reaction-difficulty-selection'); // id로 가져옴
+        const reactionGamePlayArea = document.getElementById('reaction-game-play-area'); // 새로운 요소
+        const reactionGameTitle = document.getElementById('reaction-game-title');
+        const reactionGameCanvas = document.getElementById('reaction-game-canvas');
+        const reactionCtx = reactionGameCanvas.getContext('2d');
+        const reactionRestartButton = document.getElementById('reaction-restart-button');
+        const reactionHomeButton = document.getElementById('reaction-home-button');
+        const reactionScoreSpan = document.getElementById('reaction-score');
+        const reactionTargetClicksSpan = document.getElementById('reaction-target-clicks');
+        const reactionAttemptsSpan = document.getElementById('reaction-attempts');
+        const reactionPreGameOverlay = document.getElementById('reaction-pre-game-overlay'); // 새로운 오버레이
+        const reactionInstructionText = document.getElementById('reaction-instruction-text');
+        const reactionCountdownText = document.getElementById('reaction-countdown-text');
+        const reactionGameInfo = reactionGameScreen.querySelector('.game-info-common'); // 누락된 선언 추가
+
+        // 구구단 게임 요소
+        const gugudanGameScreen = document.getElementById('gugudan-game-screen');
+        const gugudanQuestionNumberDisplay = document.getElementById('gugudan-question-number');
+        const gugudanProblemDisplay = document.getElementById('gugudan-problem');
+        const gugudanOptionsContainer = document.getElementById('gugudan-options');
+        const gugudanOptionButtons = gugudanOptionsContainer.querySelectorAll('.gugudan-option-button');
+        const gugudanRestartButton = document.getElementById('gugudan-restart-button');
+        const gugudanHomeButton = document.getElementById('gugudan-home-button');
+        // const gugudanFeedbackDisplay = document.getElementById('gugudan-feedback'); // 이제 동적으로 생성되므로 주석 처리 또는 삭제
+
+        // --- 공통 게임 설정 변수 ---
+        let currentActiveGameType = null; // 'memory', 'reaction' 또는 'gugudan'
+        const CANVAS_HORIZONTAL_PADDING = 20; // 캔버스 외부 좌우 패딩
+
+        // 카드 상수 (캔버스 그리기용)
+        const CARD_COLOR_BACK = '#555';
+        const CARD_COLOR_FRONT = '#f0f0f0';
+        const CARD_TEXT_COLOR = '#333';
+        const CARD_BORDER_COLOR = '#333';
+        const CARD_ROUND_RADIUS = 8;
+
+        // 순발력 게임 전용 카드 색상 및 아이콘 (파스텔톤으로 변경)
+        const STAR_EMOJI = '⭐';
+        const SUPER_STAR_EMOJI = '✨'; 
+        const BOMB_EMOJI = '💣'; // 폭탄 이모지로 변경
+        const TARGET_CARD_COLOR_STAR = '#FFECB3'; // 연한 노랑 (파스텔톤)
+        const TARGET_TEXT_COLOR_STAR = '#FFA000'; // 주황색 (대비)
+        const TARGET_CARD_COLOR_SUPER_STAR = '#B3E5FC'; // 연한 파랑 (파스텔톤)
+        const TARGET_TEXT_COLOR_SUPER_STAR = '#03A9F4'; // 진한 파랑 (대비)
+        const TARGET_CARD_COLOR_BOMB = '#FFCDD2'; // 연한 빨강 (파스텔톤)
+        const TARGET_TEXT_COLOR_BOMB = '#D32F2F'; // 진한 빨강 (대비)
+
+        const CLICK_PADDING_PIXELS = 15; // 순발력 게임 클릭 판정 영역 확장 (픽셀)
+
+        // 순발력 게임 시작 전 애니메이션 시간
+        const REACTION_INSTRUCTION_DURATION = 2000; // 2초 (안내 메시지)
+        const REACTION_COUNTDOWN_DURATION = 3000; // 3초 (3-2-1 카운트다운)
+        const MAX_CONSECUTIVE_BOMBS = 3; // 폭탄 최대 연속 출현 횟수
+
+        // --- 기억력 게임 변수 및 설정 ---
+        let memoryCards = [];
+        let memoryFlippedCards = [];
+        let memoryMatchedPairs = 0;
+        let memoryTotalFlips = 0;
+        let memoryLockBoard = false;
+
+        const memoryDifficulties = {
+            easy: { cols: 3, rows: 4, totalCards: 12, title: '기억력 쑥쑥 - 가장 쉬움' },
+            medium: { cols: 4, rows: 4, totalCards: 16, title: '기억력 쑥쑥 - 중간' },
+            hard: { cols: 4, rows: 5, totalCards: 20, title: '기억력 쑥쑥 - 어려움' }
+        };
+        let currentMemoryDifficulty = null;
+
+        // 쉬움 및 어려움 난이도에서 캔버스 높이 감소를 위한 상수
+        const BUTTON_VISIBILITY_REDUCTION = 50; 
+
+        // --- 순발력 게임 변수 및 설정 ---
+        let reactionScore = 0;
+        let reactionAttempts = 0;
+        let reactionTargetCard = null; // { type: 'star'/'superStar'/'bomb', x, y, width, height, value }
+        let reactionTargetVisibleTimer = null;
+        let reactionGameInterval = null;
+        let consecutiveBombs = 0; // 연속 폭탄 카운터
+        let floatingTexts = []; // 클릭 시 표시되는 +1/-1 텍스트 배열
+        let reactionAnimationLoopId = null; // 순발력 게임 애니메이션 루프 ID
+
+        const REACTION_CLICKS_NEEDED = 20; // 순발력 게임 성공 목표
+
+        const reactionDifficulties = {
+            easy: { cols: 3, rows: 4, title: '순발력 번쩍 - 쉬움', interval: 1200, duration: 800 },
+            medium: { cols: 4, rows: 4, title: '순발력 번쩍 - 보통', interval: 900, duration: 600 },
+            hard: { cols: 4, rows: 5, title: '순발력 번쩍 - 어려움', interval: 700, duration: 500 }
+        };
+        let currentReactionDifficulty = null;
+
+        // --- 구구단 게임 변수 및 설정 ---
+        let gugudanQuestions = [];
+        let currentGugudanQuestionIndex = 0;
+        let gugudanScore = 0;
+        const TOTAL_GUGUDAN_QUESTIONS = 20;
+
+        // --- Tone.js Sound Synthesisers ---
+        let initializedAudio = false; // 오디오 컨텍스트 초기화 여부
+
+        // 공통 클릭 사운드 (게임 선택, 난이도 버튼)
+        const clickSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "triangle" }, // Changed to triangle for softer tone
+            envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.05 } // Shorter, percussive envelope
+        }).toDestination();
+
+        // 별 클릭 사운드 (딩동)
+        const starClickSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 }
+        }).toDestination();
+
+        // 폭탄 클릭 사운드 (동딩) - 오답 사운드로 재활용
+        const bombClickSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sawtooth" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 }
+        }).toDestination();
+
+        // 게임 종료 사운드 (짜잔~)
+        const gameEndSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "triangle" },
+            envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.5 }
+        }).toDestination();
+
+        // 카드 뒤집기 사운드 (삭삭삭)
+        const cardFlipSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "square" },
+            envelope: { attack: 0.005, decay: 0.02, sustain: 0.01, release: 0.05 }
+        }).toDestination();
+        
+        // 카운트다운 사운드 (딧 딧 딧 띠이!!!!)
+        const countdownSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
+        }).toDestination();
+
+
+        // --- Sound Playback Functions ---
+        function playClickSound() {
+            if (!initializedAudio) Tone.start();
+            clickSynth.triggerAttackRelease("C5", "32n"); // Single, very short high note
+        }
+
+        function playStarClickSound() { // 정답 사운드로 재활용
+            if (!initializedAudio) Tone.start();
+            starClickSynth.triggerAttackRelease(["C5", "G5"], "8n"); // 딩동
+        }
+
+        function playBombClickSound() { // 오답 사운드로 재활용
+            if (!initializedAudio) Tone.start();
+            bombClickSynth.triggerAttackRelease(["G4", "C4"], "8n"); // 동딩
+        }
+
+        function playMemoryFlipSound() {
+            if (!initializedAudio) Tone.start();
+            cardFlipSynth.triggerAttackRelease(["C4", "D4", "E4"], "16n", Tone.now()); // 삭삭삭
+        }
+
+        function playTaDaSound() {
+            if (!initializedAudio) Tone.start();
+            gameEndSynth.triggerAttackRelease(["C5", "E5", "G5"], "2n"); // 짜잔~
+        }
+
+        function playCountdownSound(note, duration = "8n") {
+            if (!initializedAudio) Tone.start();
+            countdownSynth.triggerAttackRelease(note, duration);
+        }
+
+
+        // --- 공통 화면 전환 함수 ---
+        function showScreen(screenId) {
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(screen => screen.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // --- 기억력 게임 함수 ---
+
+        /**
+         * 기억력 게임 시작 함수.
+         * @param {string} difficultyKey - 선택된 난이도 키 ('easy', 'medium', 'hard')
+         */
+        function startMemoryGame(difficultyKey) {
+            playClickSound(); // 게임 시작 버튼 클릭 소리
+            currentActiveGameType = 'memory';
+            currentMemoryDifficulty = memoryDifficulties[difficultyKey];
+            
+            // 난이도 버튼을 숨기고 캔버스를 보이도록 변경
+            memoryDifficultyButtons.style.display = 'none'; 
+            memoryGameCanvas.style.display = 'block'; // 캔버스 보이기
+            memoryGameInfo.style.display = 'flex'; // 게임 정보 표시
+
+            // 캔버스 크기 조정 (반응형)
+            const appHeight = document.getElementById('app').clientHeight;
+            const appWidth = document.getElementById('app').clientWidth;
+            const screenPaddingTop = 25; // .game-screen-common의 padding-top
+
+            // game-info-common이 display:flex 상태일 때 높이를 정확히 측정
+            const originalGameInfoDisplay = memoryGameInfo.style.display;
+            memoryGameInfo.style.display = 'flex'; // 일시적으로 flex로 설정하여 offsetHeight가 정확히 계산되도록 함
+            const gameInfoHeight = memoryGameInfo.offsetHeight;
+            memoryGameInfo.style.display = originalGameInfoDisplay; // 원래 display 상태로 복원
+
+            const canvasMarginBottom = 25; // .game-canvas-common의 margin-bottom
+
+            // 캔버스가 사용할 수 있는 최대 수직 공간 계산
+            let availableVerticalSpaceForCanvas = appHeight - screenPaddingTop - gameInfoHeight - canvasMarginBottom;
+            
+            // 쉬움 및 어려움 난이도에서만 캔버스 높이 추가 감소
+            if (difficultyKey === 'easy' || difficultyKey === 'hard') {
+                availableVerticalSpaceForCanvas -= BUTTON_VISIBILITY_REDUCTION;
+            }
+
+            const canvasRenderWidth = appWidth - (2 * CANVAS_HORIZONTAL_PADDING);
+            
+            const cardSpacing = 10;
+            const tempCols = currentMemoryDifficulty.cols; 
+            const tempRows = currentMemoryDifficulty.rows; 
+
+            // 캔버스 너비를 기준으로 이상적인 카드 크기 계산
+            const idealCardWidth = (canvasRenderWidth - ((tempCols - 1) * cardSpacing)) / tempCols;
+            const idealCardHeight = idealCardWidth; 
+
+            // 이상적인 카드 크기로 그리드를 만들었을 때 필요한 캔버스 높이
+            let idealCanvasHeight = (tempRows * idealCardHeight) + ((tempRows - 1) * cardSpacing);
+
+            let finalCanvasWidth = canvasRenderWidth;
+            let finalCanvasHeight;
+
+            // 이상적인 캔버스 높이가 사용 가능한 수직 공간을 초과하는 경우, 높이에 맞춰 카드 크기 조정
+            if (idealCanvasHeight > availableVerticalSpaceForCanvas) {
+                finalCanvasHeight = availableVerticalSpaceForCanvas;
+                const newCardHeight = (finalCanvasHeight - ((tempRows - 1) * cardSpacing)) / tempRows;
+                const newCardWidth = newCardHeight; // 종횡비 유지
+                finalCanvasWidth = (tempCols * newCardWidth) + ((tempCols - 1) * cardSpacing);
+            } else {
+                finalCanvasHeight = idealCanvasHeight;
+            }
+
+            // 캔버스 최종 크기 설정
+            memoryGameCanvas.width = finalCanvasWidth;
+            memoryGameCanvas.height = finalCanvasHeight;
+
+            createMemoryCards();
+            shuffleMemoryCards();
+            resetMemoryGameState(); // currentMemoryDifficulty가 설정된 후 호출
+            drawMemoryGame();
+
+            // showScreen('memory-game-screen'); // 이미 해당 화면이므로 주석 처리 또는 제거
+        }
+
+        function createMemoryCards() {
+            memoryCards = [];
+            const numPairs = currentMemoryDifficulty.totalCards / 2;
+            for (let i = 1; i <= numPairs; i++) {
+                memoryCards.push({ value: i, isFlipped: false, isMatched: false, displayRotation: 0 });
+                memoryCards.push({ value: i, isFlipped: false, isMatched: false, displayRotation: 0 });
+            }
+        }
+
+        function shuffleMemoryCards() {
+            for (let i = memoryCards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [memoryCards[i], memoryCards[j]] = [memoryCards[j], memoryCards[i]];
+            }
+        }
+
+        function resetMemoryGameState() {
+            memoryFlippedCards = [];
+            memoryMatchedPairs = 0;
+            memoryTotalFlips = 0;
+            memoryLockBoard = false;
+            memoryCards.forEach(card => {
+                card.isFlipped = false;
+                card.isMatched = false;
+                card.displayRotation = 0;
+            });
+        }
+
+        function drawMemoryGame() {
+            memoryCtx.clearRect(0, 0, memoryGameCanvas.width, memoryGameCanvas.height);
+
+            const cardSpacing = 10;
+            // 캔버스 너비와 높이를 기준으로 카드 너비/높이를 재계산
+            const cardWidth = (memoryGameCanvas.width - ((currentMemoryDifficulty.cols - 1) * cardSpacing)) / currentMemoryDifficulty.cols;
+            const cardHeight = (memoryGameCanvas.height - ((currentMemoryDifficulty.rows - 1) * cardSpacing)) / currentMemoryDifficulty.rows;
+
+            memoryCards.forEach((card, index) => {
+                const col = index % currentMemoryDifficulty.cols;
+                const row = Math.floor(index / currentMemoryDifficulty.cols);
+
+                // 카드의 실제 그려질 위치 및 크기 계산 (조정된 캔버스 크기 반영)
+                card.x = col * (cardWidth + cardSpacing);
+                card.y = row * (cardHeight + cardSpacing);
+                card.width = cardWidth;
+                card.height = cardHeight;
+
+                drawCard(memoryCtx, card, CARD_COLOR_BACK, CARD_COLOR_FRONT, CARD_TEXT_COLOR, CARD_BORDER_COLOR);
+            });
+        }
+
+        /**
+         * 카드 그리기 (공통 함수)
+         * @param {CanvasRenderingContext2D} context - 그릴 캔버스 컨텍스트
+         * @param {object} card - 카드 객체 (value, x, y, width, height, isMatched, displayRotation, type)
+         * @param {string} backColor - 뒷면 색상
+         * @param {string} frontColor - 앞면 색상
+         * @param {string} textColor - 텍스트 색상
+         * @param {string} borderColor - 테두리 색상
+         */
+        function drawCard(context, card, backColor, frontColor, textColor, borderColor) {
+            const { x, y, width, height, value, isMatched, displayRotation, type } = card; // card.type 추가
+
+            if (isMatched) {
+                return;
+            }
+
+            context.save();
+            context.translate(x + width / 2, y + height / 2);
+            context.rotate(displayRotation * Math.PI / 180);
+
+            let fillColor = backColor;
+            // 순발력 게임의 경우 항상 앞면으로 표시되지만, 애니메이션 로직을 위해 rotation 사용
+            if (displayRotation > 90 || type === 'star' || type === 'superStar' || type === 'bomb') { // card.type으로 변경
+                fillColor = frontColor;
+            }
+
+            context.fillStyle = fillColor;
+            roundRect(context, -width / 2, -height / 2, width, height, CARD_ROUND_RADIUS);
+            context.fill();
+
+            context.strokeStyle = borderColor;
+            context.lineWidth = 2;
+            roundRect(context, -width / 2, -height / 2, width, height, CARD_ROUND_RADIUS);
+            context.stroke();
+
+            // 메모리 게임 카드이거나, 순발력 게임의 타겟 카드인 경우 텍스트/이미지 표시
+            if (card.isFlipped || type === 'star' || type === 'superStar' || type === 'bomb') { // card.type으로 변경
+                context.fillStyle = textColor;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+
+                // 카드의 현재 회전량을 역으로 적용하여 글씨는 항상 똑바로 보이도록 함
+                if (type === undefined) { // 메모리 카드인 경우
+                    context.rotate(-displayRotation * Math.PI / 180); 
+                    context.font = `${width * 0.4}px 'Segoe UI Emoji', Arial, sans-serif`; /* 이모지 지원 폰트 */
+                    context.fillText(value, 0, 0);
+                } else if (displayRotation > 90) { // 순발력 게임 카드 (이미 항상 180도 회전)
+                    context.rotate(180 * Math.PI / 180); // 항상 앞면이 위를 향하도록 다시 회전
+
+                    if (type === 'bomb') { // 폭탄 카드일 경우
+                        drawBombShape(context, width * 0.5); // 카드 크기에 비례하여 폭탄 그리기
+                    } else { // 별 카드일 경우
+                        context.font = `${width * 0.4}px 'Segoe UI Emoji', Arial, sans-serif`;
+                        context.fillText(value, 0, 0);
+                    }
+                }
+            }
+            context.restore();
+        }
+
+        /**
+         * 둥근 사각형을 그리는 헬퍼 함수
+         * @param {CanvasRenderingContext2D} context - 캔버스 2D 컨텍스트
+         * @param {number} x - x 좌표
+         * @param {number} y - y 좌표
+         * @param {number} width - 너비
+         * @param {number} height - 높이
+         * @param {number} radius - 둥근 모서리 반지름
+         */
+        function roundRect(context, x, y, width, height, radius) {
+            context.beginPath();
+            context.moveTo(x + radius, y);
+            context.lineTo(x + width - radius, y);
+            context.quadraticCurveTo(x + width, y, x + width, y + radius);
+            context.lineTo(x + width, y + height - radius);
+            context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height); 
+            context.lineTo(x + radius, y + height);
+            context.quadraticCurveTo(x, y + height, x, y + height - radius);
+            context.lineTo(x, y + radius);
+            context.quadraticCurveTo(x, y, x + radius, y);
+            context.closePath();
+        }
+
+        /**
+         * 폭탄 모양을 그리는 함수
+         * @param {CanvasRenderingContext2D} context - 캔버스 2D 컨텍스트
+         * @param {number} size - 폭탄 크기 (반지름 또는 폭)
+         */
+        function drawBombShape(context, size) {
+            const bombRadius = size * 0.4; // 카드 크기에 비례
+            const fuseLength = size * 0.4;
+            const fuseAngle = -Math.PI / 4; // 심지 각도 (오른쪽 위로)
+
+            // 폭탄 몸통 (원)
+            context.beginPath();
+            context.arc(0, bombRadius * 0.2, bombRadius, 0, Math.PI * 2, true); // 약간 아래로 배치하여 심지 공간 확보
+            context.fillStyle = 'black'; // 폭탄 몸통 색상
+            context.fill();
+
+            // 심지
+            context.beginPath();
+            context.strokeStyle = 'darkgray'; // 심지 색상
+            context.lineWidth = 3;
+            context.lineCap = 'round';
+            context.moveTo(0, -bombRadius * 0.8); // 몸통 상단에서 시작
+            context.lineTo(Math.cos(fuseAngle) * fuseLength, Math.sin(fuseAngle) * fuseLength - bombRadius * 0.8);
+            context.stroke();
+
+            // 불꽃 (작은 원)
+            context.beginPath();
+            context.arc(Math.cos(fuseAngle) * fuseLength, Math.sin(fuseAngle) * fuseLength - bombRadius * 0.8, size * 0.08, 0, Math.PI * 2, true);
+            context.fillStyle = 'orange'; // 불꽃 색상
+            context.fill();
+        }
+
+
+        /**
+         * 카드 뒤집기 애니메이션 (공통 함수)
+         * 순발력 게임은 항상 앞면이라 사실상 사용되지 않음.
+         */
+        function flipCardAnimation(context, card, startRotation, endRotation, callback) {
+            const duration = 500;
+            const startTime = performance.now();
+
+            function animate(currentTime) {
+                const elapsedTime = currentTime - startTime;
+                const progress = Math.min(elapsedTime / duration, 1);
+                card.displayRotation = startRotation + (endRotation - startRotation) * progress;
+                // 현재 활성화된 게임의 캔버스만 다시 그림
+                if (currentActiveGameType === 'memory') {
+                    drawMemoryGame();
+                } else if (currentActiveGameType === 'reaction') {
+                    // drawReactionGame(); // 순발력 게임에서는 별도 애니메이션 루프가 있으므로 여기서 직접 그리지 않음
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    card.displayRotation = endRotation;
+                    // 여기서도 직접 drawGame을 호출하지 않고, 메인 애니메이션 루프에 맡김
+                    if (callback) {
+                        callback();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        /**
+         * 기억력 게임 캔버스 클릭/터치 핸들러
+         */
+        function handleMemoryCanvasInteraction(event) {
+            if (memoryLockBoard) return;
+
+            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+
+            const rect = memoryGameCanvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            const clickedCard = memoryCards.find(card => {
+                return x >= card.x && x <= card.x + card.width &&
+                       y >= card.y && y <= card.y + card.height &&
+                       !card.isMatched;
+            });
+
+            if (clickedCard && !clickedCard.isFlipped && !memoryFlippedCards.includes(clickedCard)) {
+                playMemoryFlipSound(); // 카드 뒤집기 소리 재생
+                clickedCard.isFlipped = true; // 카드가 클릭되자마자 isFlipped 상태를 true로 설정
+                memoryFlippedCards.push(clickedCard);
+                memoryTotalFlips++;
+                // updateMemoryInfo(); // 문구 삭제로 더 이상 필요 없음
+
+                flipCardAnimation(memoryCtx, clickedCard, 0, 180, () => {
+                    if (memoryFlippedCards.length === 2) {
+                        memoryLockBoard = true;
+                        setTimeout(checkMemoryMatch, 1000);
+                    }
+                });
+            }
+        }
+
+        function checkMemoryMatch() {
+            const [card1, card2] = memoryFlippedCards;
+
+            if (card1.value === card2.value) {
+                card1.isMatched = true;
+                card2.isMatched = true;
+                memoryMatchedPairs++;
+                // updateMemoryInfo(); // 문구 삭제로 더 이상 필요 없음
+                drawMemoryGame(); // 짝이 맞은 카드 사라지게
+
+                if (memoryMatchedPairs === currentMemoryDifficulty.totalCards / 2) {
+                    setTimeout(() => {
+                        showModal('기억력 쑥쑥!', '축하합니다! 모든 짝을 맞추셨습니다!');
+                        playTaDaSound(); // 게임 종료 소리 재생
+                    }, 500);
+                }
+            } else {
+                setTimeout(() => {
+                    flipCardAnimation(memoryCtx, card1, 180, 0, () => {
+                        card1.isFlipped = false;
+                    });
+                    flipCardAnimation(memoryCtx, card2, 180, 0, () => {
+                        card2.isFlipped = false;
+                        drawMemoryGame();
+                    });
+                }, 800);
+            }
+
+            memoryFlippedCards = [];
+            memoryLockBoard = false;
+        }
+
+        // 문구 삭제로 이 함수는 더 이상 필요 없습니다.
+        /*
+        function updateMemoryInfo() {
+            // currentMemoryDifficulty가 존재할 때만 totalCards에 접근
+            if (currentMemoryDifficulty) { 
+                memoryFlippedCountSpan.textContent = memoryTotalFlips;
+                memoryMatchedCountSpan.textContent = (currentMemoryDifficulty.totalCards / 2) - memoryMatchedPairs;
+            }
+        }
+        */
+
+
+        // --- 순발력 게임 함수 ---
+
+        /**
+         * 순발력 게임 시작 함수.
+         * @param {string} difficultyKey - 선택된 난이도 키 ('easy', 'medium', 'hard')
+         */
+        function startReactionGame(difficultyKey) {
+            playClickSound(); // 난이도 선택 버튼 클릭 소리
+            currentActiveGameType = 'reaction';
+            currentReactionDifficulty = reactionDifficulties[difficultyKey]; // 할당 시점 변경: 먼저 난이도 정보를 설정
+            // reactionGameTitle.textContent = currentReactionDifficulty.title; // 이 줄은 이제 CSS로 제목이 숨겨지므로 효과가 없습니다.
+            
+            // 다른 게임 화면 비활성화 (기억력 게임)
+            memoryGameScreen.classList.remove('active'); 
+
+            // 난이도 선택 후, 난이도 버튼 숨기고 게임 플레이 영역 표시
+            reactionDifficultyButtons.style.display = 'none';
+            reactionGamePlayArea.style.display = 'flex'; // flex로 설정하여 내부 요소 정렬
+
+            // 캔버스 크기 조정 (반응형)
+            const appHeight = document.getElementById('app').clientHeight;
+            const appWidth = document.getElementById('app').clientWidth;
+            const screenPaddingTop = 25; // .game-screen-common의 padding-top
+
+            // game-info-common이 display:flex 상태일 때 높이를 정확히 측정
+            const originalGameInfoDisplay = reactionGameInfo.style.display;
+            reactionGameInfo.style.display = 'flex'; // 일시적으로 flex로 설정하여 offsetHeight가 정확히 계산되도록 함
+            const gameInfoHeight = reactionGameInfo.offsetHeight;
+            reactionGameInfo.style.display = originalGameInfoDisplay; // 원래 display 상태로 복원
+
+            const canvasMarginBottom = 25; // .game-canvas-common의 margin-bottom
+
+            // 캔버스가 사용할 수 있는 최대 수직 공간 계산
+            const availableVerticalSpaceForCanvas = appHeight - screenPaddingTop - gameInfoHeight - canvasMarginBottom;
+            
+            const canvasRenderWidth = appWidth - (2 * CANVAS_HORIZONTAL_PADDING);
+            
+            const cardSpacing = 10;
+            const tempCols = currentReactionDifficulty.cols; 
+            const tempRows = currentReactionDifficulty.rows; 
+
+            // 캔버스 너비를 기준으로 이상적인 카드 크기 계산
+            const idealCardWidth = (canvasRenderWidth - ((tempCols - 1) * cardSpacing)) / tempCols;
+            const idealCardHeight = idealCardWidth; 
+
+            // 이상적인 카드 크기로 그리드를 만들었을 때 필요한 캔버스 높이
+            let idealCanvasHeight = (tempRows * idealCardHeight) + ((tempRows - 1) * cardSpacing);
+
+            let finalCanvasWidth = canvasRenderWidth;
+            let finalCanvasHeight;
+
+            // 이상적인 캔버스 높이가 사용 가능한 수직 공간을 초과하는 경우, 높이에 맞춰 카드 크기 조정
+            if (idealCanvasHeight > availableVerticalSpaceForCanvas) {
+                finalCanvasHeight = availableVerticalSpaceForCanvas;
+                const newCardHeight = (finalCanvasHeight - ((tempRows - 1) * cardSpacing)) / tempRows;
+                const newCardWidth = newCardHeight; // 종횡비 유지
+                finalCanvasWidth = (tempCols * newCardWidth) + ((tempCols - 1) * cardSpacing);
+            } else {
+                finalCanvasHeight = idealCanvasHeight;
+            }
+
+            // 캔버스 최종 크기 설정
+            reactionGameCanvas.width = finalCanvasWidth;
+            reactionGameCanvas.height = finalCanvasHeight;
+
+
+            reactionTargetClicksSpan.textContent = REACTION_CLICKS_NEEDED; // 목표 클릭 수 설정
+            resetReactionGameState(); // 게임 상태 초기화 (여기서 모든 타이머 중지 및 floatingTexts 초기화)
+
+            showScreen('reaction-game-screen'); // 순발력 게임 화면으로 전환
+
+            // 게임 시작 전 안내 및 카운트다운 시작
+            showReactionPreGameOverlay(); // 오버레이 표시
+            showReactionInstruction(); // 안내 시작
+        }
+
+        function resetReactionGameState() {
+            reactionScore = 0;
+            reactionAttempts = 0;
+            reactionTargetCard = null;
+            consecutiveBombs = 0; // 연속 폭탄 카운터 초기화
+            floatingTexts = []; // 플로팅 텍스트 초기화
+            reactionScoreSpan.textContent = reactionScore;
+            reactionAttemptsSpan.textContent = reactionAttempts;
+            drawReactionGame(); // 빈 캔버스 그리기
+            stopReactionGameLoop(); // 기존 루프 중지
+            stopReactionAnimationLoop(); // 애니메이션 루프 중지
+            // 오버레이 및 텍스트 초기화
+            reactionPreGameOverlay.style.display = 'none';
+            reactionInstructionText.style.display = 'flex';
+            reactionCountdownText.style.display = 'none';
+        }
+
+        function showReactionPreGameOverlay() {
+            // 캔버스 위에 정확히 겹치도록 위치 조정
+            // Note: Removed dynamic positioning using canvasRect to rely on CSS centering instead.
+            reactionPreGameOverlay.style.display = 'flex'; // 오버레이 표시
+        }
+
+
+        function showReactionInstruction() {
+            reactionInstructionText.style.display = 'flex';
+            reactionCountdownText.style.display = 'none';
+            // "별 모양만 눌러주세요!" 메시지 표시
+            reactionInstructionText.innerHTML = `
+                <span class="emoji-display">⭐</span>
+                <span>별 모양만 눌러주세요!</span>
+                <span class="emoji-display">✨</span>
+                <span>작은 별은 더 높은 점수!</span>
+                <span class="emoji-display">💣</span>
+                <span>폭탄은 누르면 안돼요!</span>
+            `;
+            setTimeout(() => {
+                startReactionCountdown();
+            }, REACTION_INSTRUCTION_DURATION);
+        }
+
+        function startReactionCountdown() {
+            reactionInstructionText.style.display = 'none';
+            reactionCountdownText.style.display = 'block';
+            let count = 3;
+
+            // 3초부터 소리 재생
+            reactionCountdownText.textContent = count;
+            playCountdownSound("C4"); // 딧 
+
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    reactionCountdownText.textContent = count;
+                    playCountdownSound("C4"); // 딧
+                } else if (count === 0) {
+                    reactionCountdownText.textContent = '시작!'; // "시작!" 텍스트는 CSS에서 크기 조절
+                    playCountdownSound("G5", "0.5"); // 띠이!!!! (높은 음, 길게)
+                    clearInterval(countdownInterval);
+                    setTimeout(() => { // "시작!" 소리 이후 짧은 지연
+                        reactionPreGameOverlay.style.display = 'none'; // 오버레이 숨기기
+                        startReactionGameLoop(); // 게임 루프 시작
+                        startReactionAnimationLoop(); // 애니메이션 루프 시작
+                    }, 500); 
+                }
+            }, 1000); // 1초마다 카운트다운
+        }
+
+
+        function startReactionGameLoop() {
+            stopReactionGameLoop(); // 이전에 실행 중인 인터벌이 있다면 중지
+            reactionGameInterval = setInterval(showRandomReactionCard, currentReactionDifficulty.interval);
+        }
+
+        function stopReactionGameLoop() {
+            if (reactionGameInterval) {
+                clearInterval(reactionGameInterval);
+                reactionGameInterval = null;
+            }
+            if (reactionTargetVisibleTimer) {
+                clearTimeout(reactionTargetVisibleTimer);
+                reactionTargetVisibleTimer = null;
+            }
+        }
+        
+        // 순발력 게임의 애니메이션을 위한 별도 루프
+        function startReactionAnimationLoop() {
+            stopReactionAnimationLoop(); // 기존 루프가 있다면 중지
+            function animateReaction() {
+                if (currentActiveGameType === 'reaction' && reactionGameScreen.classList.contains('active')) {
+                    drawReactionGame(); // 카드 및 배경 그리기
+                    drawFloatingTexts(reactionCtx); // 플로팅 텍스트 그리기
+                }
+                reactionAnimationLoopId = requestAnimationFrame(animateReaction);
+            }
+            reactionAnimationLoopId = requestAnimationFrame(animateReaction);
+        }
+
+        function stopReactionAnimationLoop() {
+            if (reactionAnimationLoopId) {
+                cancelAnimationFrame(reactionAnimationLoopId);
+                reactionAnimationLoopId = null;
+            }
+        }
+
+
+        function showRandomReactionCard() {
+            if (reactionScore >= REACTION_CLICKS_NEEDED) { // 목표 달성 시 중지
+                stopReactionGameLoop();
+                return;
+            }
+
+            // 이전 타겟이 남아있다면 지우기 (애니메이션 루프가 있으므로 바로 그리지 않음)
+            reactionTargetCard = null;
+            if (reactionTargetVisibleTimer) {
+                clearTimeout(reactionTargetVisibleTimer);
+                reactionTargetVisibleTimer = null;
+            }
+
+            reactionAttempts++; // 시도 횟수 증가
+            reactionAttemptsSpan.textContent = reactionAttempts;
+
+            const cardSpacing = 10;
+            // 현재 난이도의 설정된 컬럼 및 로우를 기반으로 한 기본 카드 너비/높이 계산
+            // 캔버스가 이미 최종 크기로 조정되었으므로, 캔버스 크기를 기준으로 카드 크기를 계산
+            const baseCardWidth = (reactionGameCanvas.width - ((currentReactionDifficulty.cols - 1) * cardSpacing)) / currentReactionDifficulty.cols;
+            const baseCardHeight = baseCardWidth; // 정사각형 카드
+
+            let currentCardWidth = baseCardWidth;
+            let currentCardHeight = baseCardHeight;
+            let currentCardDuration = currentReactionDifficulty.duration;
+
+            // 카드 타입 결정
+            let cardType;
+            const randomValue = Math.random();
+
+            // 연속 폭탄 제한 로직
+            if (consecutiveBombs >= MAX_CONSECUTIVE_BOMBS || randomValue < 0.65) { // 65% 일반 별
+                cardType = 'star';
+                consecutiveBombs = 0; // 별이 나오면 연속 폭탄 카운터 리셋
+            } else if (randomValue < 0.70) { // 5% 작은 별 (0.65 ~ 0.70)
+                cardType = 'superStar';
+                consecutiveBombs = 0;
+                // 작은 별은 크기와 지속 시간을 조절
+                currentCardWidth *= 0.7;
+                currentCardHeight *= 0.7;
+                currentCardDuration *= 0.7;
+            } else { // 나머지 30% 폭탄 (0.70 ~ 1.0)
+                cardType = 'bomb';
+                consecutiveBombs++; // 폭탄이 나오면 연속 폭탄 카운터 증가
+            }
+
+            // 캔버스 내에서 카드가 완전히 들어갈 수 있는 최대 X, Y 시작 위치를 계산합니다.
+            const maxCardStartX = Math.max(0, reactionGameCanvas.width - currentCardWidth);
+            const maxCardStartY = Math.max(0, reactionGameCanvas.height - currentCardHeight);
+
+            // 이제 이 최대 시작 위치 내에서 무작위 좌표를 선택합니다.
+            const x = Math.random() * maxCardStartX;
+            const y = Math.random() * maxCardStartY;
+
+            reactionTargetCard = {
+                type: cardType,
+                value: cardType === 'star' ? STAR_EMOJI : (cardType === 'superStar' ? SUPER_STAR_EMOJI : BOMB_EMOJI),
+                x: x, // 무작위 X 좌표
+                y: y, // 무작위 Y 좌표
+                width: currentCardWidth,
+                height: currentCardHeight,
+                isFlipped: true, // 항상 앞면으로 표시
+                isMatched: false,
+                displayRotation: 180 // 앞면 보이도록
+            };
+
+            // 일정 시간 후 타겟 카드 사라지게
+            reactionTargetVisibleTimer = setTimeout(() => {
+                reactionTargetCard = null;
+            }, currentCardDuration);
+        }
+
+        /**
+         * 순발력 게임 보드를 그립니다.
+         */
+        function drawReactionGame() {
+            reactionCtx.clearRect(0, 0, reactionGameCanvas.width, reactionGameCanvas.height);
+
+            // 타겟 카드가 있다면 그리기
+            if (reactionTargetCard) {
+                let cardFrontColor, cardTextColor;
+                if (reactionTargetCard.type === 'star') {
+                    cardFrontColor = TARGET_CARD_COLOR_STAR;
+                    cardTextColor = TARGET_TEXT_COLOR_STAR;
+                } else if (reactionTargetCard.type === 'superStar') {
+                    cardFrontColor = TARGET_CARD_COLOR_SUPER_STAR;
+                    cardTextColor = TARGET_TEXT_COLOR_SUPER_STAR;
+                } else { // bomb
+                    cardFrontColor = TARGET_CARD_COLOR_BOMB;
+                    cardTextColor = TARGET_TEXT_COLOR_BOMB;
+                }
+                drawCard(reactionCtx, reactionTargetCard, CARD_COLOR_BACK, cardFrontColor, cardTextColor, CARD_BORDER_COLOR);
+            }
+        }
+
+        /**
+         * 클릭 시 표시되는 +1/-1 텍스트를 그리는 함수
+         * @param {CanvasRenderingContext2D} context - 캔버스 2D 컨텍스트
+         */
+        function drawFloatingTexts(context) {
+            const currentTime = performance.now();
+            floatingTexts = floatingTexts.filter(textObj => {
+                const elapsedTime = currentTime - textObj.startTime;
+                const animationDuration = 800; // 텍스트가 나타나고 사라지는 총 시간 (ms)
+                const moveDistance = 50; // 텍스트가 위로 움직이는 거리 (px)
+
+                if (elapsedTime > animationDuration) return false; // 애니메이션이 끝나면 배열에서 제거
+
+                const progress = elapsedTime / animationDuration;
+                textObj.alpha = Math.max(0, 1 - progress); // 시간이 지남에 따라 투명도 감소
+                textObj.offsetY = -progress * moveDistance; // 시간이 지남에 따라 위로 이동
+
+                context.save();
+                context.globalAlpha = textObj.alpha;
+                context.fillStyle = textObj.color;
+                // 폰트 크기를 시간 경과에 따라 약간 줄어들게 하여 시각적 효과 추가
+                context.font = `bold ${30 * (1 - progress * 0.5)}px Inter`; 
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                // 원래 위치에서 offsetY만큼 위로 이동하여 그리기
+                context.fillText(textObj.text, textObj.x, textObj.y + textObj.offsetY);
+                context.restore();
+                return true;;
+            });
+        }
+
+
+        /**
+         * 순발력 게임 캔버스 클릭/터치 핸들러
+         */
+        function handleReactionCanvasInteraction(event) {
+            // 게임이 진행 중인 상태에서만 클릭 처리 (오버레이가 활성화된 상태에서는 클릭 무시)
+            if (!reactionGameInterval || reactionPreGameOverlay.style.display !== 'none') return;
+
+            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+
+            const rect = reactionGameCanvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            // 클릭 판정 영역을 확장하여 검사
+            if (reactionTargetCard &&
+                x >= reactionTargetCard.x - CLICK_PADDING_PIXELS &&
+                x <= reactionTargetCard.x + reactionTargetCard.width + CLICK_PADDING_PIXELS &&
+                y >= reactionTargetCard.y - CLICK_PADDING_PIXELS &&
+                y <= reactionTargetCard.y + reactionTargetCard.height + CLICK_PADDING_PIXELS) {
+                
+                // 클릭된 카드의 중앙 좌표 계산 (점수 텍스트 표시용)
+                const textX = reactionTargetCard.x + reactionTargetCard.width / 2;
+                const textY = reactionTargetCard.y + reactionTargetCard.height / 2;
+
+                // 타겟 카드를 맞춤
+                if (reactionTargetCard.type === 'star') {
+                    reactionScore++;
+                    floatingTexts.push({ text: '+1점', x: textX, y: textY, color: '#4CAF50', startTime: performance.now() }); /* 초록색 */
+                    playStarClickSound(); // 별 클릭 소리 재생
+                } else if (reactionTargetCard.type === 'superStar') { // 작은 별
+                    reactionScore += 3;
+                    floatingTexts.push({ text: '+3점', x: textX, y: textY, color: '#FFD700', startTime: performance.now() }); /* 황금색 */
+                    playStarClickSound(); // 별 클릭 소리 재생 (동일 사운드)
+                } else if (reactionTargetCard.type === 'bomb') {
+                    reactionScore = Math.max(0, reactionScore - 1); // 점수 0 미만으로 내려가지 않도록
+                    floatingTexts.push({ text: '-1점', x: textX, y: textY, color: '#F44336', startTime: performance.now() }); /* 빨간색 */
+                    playBombClickSound(); // 폭탄 클릭 소리 재생
+                }
+                reactionScoreSpan.textContent = reactionScore;
+                
+                // 타겟 카드 바로 사라지게 하고 다음 카드 준비
+                reactionTargetCard = null;
+                // drawReactionGame(); // 애니메이션 루프가 지울 것이므로 여기서 직접 호출하지 않음
+                if (reactionTargetVisibleTimer) {
+                    clearTimeout(reactionTargetVisibleTimer);
+                    reactionTargetVisibleTimer = null;
+                }
+
+                if (reactionScore >= REACTION_CLICKS_NEEDED) {
+                    stopReactionGameLoop();
+                    stopReactionAnimationLoop(); // 게임 종료 시 애니메이션 루프도 중지
+                    setTimeout(() => {
+                        showModal('순발력 번쩍!', '축하합니다! 목표를 달성했습니다!');
+                        playTaDaSound(); // 게임 종료 소리 재생
+                    }, 100);
+                }
+            }
+            // 타겟이 없거나 엉뚱한 곳을 클릭한 경우 무시
+        }
+
+
+        // --- 구구단 게임 함수 ---
+
+        /**
+         * 구구단 게임 시작 함수.
+         */
+        function startGugudanGame() {
+            playClickSound(); // 게임 시작 버튼 클릭 소리
+            currentActiveGameType = 'gugudan';
+            
+            showScreen('gugudan-game-screen');
+            currentGugudanQuestionIndex = 0;
+            gugudanScore = 0;
+            generateGugudanQuestions();
+            displayGugudanQuestion();
+        }
+
+        /**
+         * 구구단 문제들을 생성합니다.
+         */
+        function generateGugudanQuestions() {
+            gugudanQuestions = [];
+            for (let i = 0; i < TOTAL_GUGUDAN_QUESTIONS; i++) {
+                const num1 = Math.floor(Math.random() * 8) + 2; // 2에서 9까지
+                const num2 = Math.floor(Math.random() * 8) + 2; // 2에서 9까지
+                const correctAnswer = num1 * num2;
+                
+                let options = new Set();
+                options.add(correctAnswer);
+
+                // 오답 생성 (정답 주변 값, 또는 다른 조합)
+                while (options.size < 4) {
+                    let incorrectAnswer;
+                    const randomType = Math.random();
+                    if (randomType < 0.33) { // num1 변경
+                        incorrectAnswer = (num1 + (Math.random() < 0.5 ? 1 : -1)) * num2;
+                    } else if (randomType < 0.66) { // num2 변경
+                        incorrectAnswer = num1 * (num2 + (Math.random() < 0.5 ? 1 : -1));
+                    } else { // 랜덤 값
+                        incorrectAnswer = Math.floor(Math.random() * 81) + 4; // 4에서 84 (2*2~9*9 범위 고려)
+                    }
+                    // 너무 쉽거나 너무 어려운 오답 방지 (예: 0이하, 100이상, 현재 값과 너무 차이나는 경우 제외)
+                    if (incorrectAnswer > 0 && incorrectAnswer <= 81 && Math.abs(incorrectAnswer - correctAnswer) > 1 && incorrectAnswer !== correctAnswer) {
+                        options.add(incorrectAnswer);
+                    }
+                }
+                
+                const shuffledOptions = Array.from(options).sort(() => Math.random() - 0.5);
+
+                gugudanQuestions.push({
+                    problem: `${num1} X ${num2} = ?`,
+                    correctAnswer: correctAnswer,
+                    options: shuffledOptions
+                });
+            }
+        }
+
+        /**
+         * 현재 구구단 문제를 화면에 표시합니다.
+         */
+        function displayGugudanQuestion() {
+            if (currentGugudanQuestionIndex >= TOTAL_GUGUDAN_QUESTIONS) {
+                showGugudanResults();
+                return;
+            }
+
+            const currentQuestion = gugudanQuestions[currentGugudanQuestionIndex];
+            gugudanQuestionNumberDisplay.textContent = `문제 ${currentGugudanQuestionIndex + 1}/${TOTAL_GUGUDAN_QUESTIONS}`;
+            gugudanProblemDisplay.textContent = currentQuestion.problem;
+
+            gugudanOptionButtons.forEach((button, index) => {
+                button.textContent = currentQuestion.options[index];
+                button.disabled = false; // 버튼 다시 활성화
+                button.onclick = (event) => handleGugudanAnswer(parseInt(button.textContent), event.target); // 클릭된 버튼 전달
+            });
+            // 문제 표시될 때 기존 피드백 텍스트 제거 (있다면)
+            document.querySelectorAll('.gugudan-feedback-text').forEach(el => el.remove());
+        }
+
+        /**
+         * 구구단 문제에 대한 사용자의 답변을 처리합니다.
+         * @param {number} selectedAnswer - 사용자가 선택한 답
+         * @param {HTMLElement} clickedButton - 사용자가 클릭한 버튼 요소
+         */
+        function handleGugudanAnswer(selectedAnswer, clickedButton) {
+            playClickSound(); // 답변 버튼 클릭 소리
+            const currentQuestion = gugudanQuestions[currentGugudanQuestionIndex];
+
+            // 모든 답변 버튼 비활성화
+            gugudanOptionButtons.forEach(button => button.disabled = true);
+
+            const feedbackTextElement = document.createElement('div');
+            feedbackTextElement.classList.add('gugudan-feedback-text');
+
+            if (selectedAnswer === currentQuestion.correctAnswer) {
+                gugudanScore++;
+                playStarClickSound(); // 정답 사운드
+                feedbackTextElement.textContent = '정답!!';
+                feedbackTextElement.style.color = '#4CAF50'; // 초록색
+            } else {
+                playBombClickSound(); // 오답 사운드
+                feedbackTextElement.textContent = '오답!';
+                feedbackTextElement.style.color = '#F44336'; // 빨간색
+            }
+
+            // 클릭된 버튼 위치에 피드백 텍스트 위치 설정
+            const buttonRect = clickedButton.getBoundingClientRect();
+            const appRect = document.getElementById('app').getBoundingClientRect();
+
+            // app 요소의 왼쪽 상단 모서리를 기준으로 버튼의 중앙 좌표 계산
+            feedbackTextElement.style.left = `${buttonRect.left - appRect.left + buttonRect.width / 2}px`;
+            feedbackTextElement.style.top = `${buttonRect.top - appRect.top + buttonRect.height / 2}px`;
+            
+            feedbackTextElement.style.position = 'absolute'; // app 기준으로 absolute
+            feedbackTextElement.style.transform = 'translate(-50%, -50%)'; // 중앙 정렬
+            document.getElementById('app').appendChild(feedbackTextElement); // app에 추가하여 위치 제어
+
+            // 애니메이션 시작
+            setTimeout(() => {
+                feedbackTextElement.style.opacity = 1;
+                feedbackTextElement.style.transform = 'translate(-50%, -80%)'; // 살짝 위로 이동하면서 나타남
+            }, 50); // 짧은 지연 후 애니메이션 시작
+
+            setTimeout(() => {
+                // 피드백 텍스트 사라지게
+                feedbackTextElement.style.opacity = 0;
+                feedbackTextElement.style.transform = 'translate(-50%, -100%)'; // 더 위로 사라짐
+                
+                // 애니메이션 완료 후 요소 제거
+                feedbackTextElement.addEventListener('transitionend', () => {
+                    feedbackTextElement.remove();
+                }, { once: true }); // 한 번만 실행되도록
+
+                currentGugudanQuestionIndex++;
+                displayGugudanQuestion(); // 다음 문제 표시 (이 함수 내부에서 버튼 다시 활성화)
+            }, 1000); // 1초 후 다음 문제로 넘어감 (피드백 확인 시간)
+        }
+
+        /**
+         * 구구단 게임 결과를 모달로 표시합니다.
+         */
+        function showGugudanResults() {
+            showModal('구구단 게임 종료!', `총 ${TOTAL_GUGUDAN_QUESTIONS}문제 중 ${gugudanScore}개 맞췄습니다!`);
+            playTaDaSound(); // 게임 종료 사운드
+        }
+
+
+        // --- 공통 모달 함수 ---
+
+        /**
+         * 사용자에게 메시지를 보여주는 커스텀 모달
+         * @param {string} title - 모달 제목
+         * @param {string} message - 표시할 메시지
+         */
+        function showModal(title, message) {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                    <button class="modal-close-button">확인</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const closeButton = modal.querySelector('.modal-close-button');
+            closeButton.onclick = () => {
+                document.body.removeChild(modal);
+                // 모달 닫으면 홈 화면으로 돌아가기
+                showScreen('home-screen');
+                // 게임 루프 중지 (혹시 모를 상황 대비)
+                stopReactionGameLoop();
+                stopReactionAnimationLoop(); // 애니메이션 루프 중지
+                // 순발력 게임 화면 초기화
+                reactionDifficultyButtons.style.display = 'flex'; // 난이도 버튼 다시 보이게
+                reactionGamePlayArea.style.display = 'none'; // 플레이 영역 숨기기
+                reactionGameCanvas.width = 0; // 캔버스 초기화
+                reactionGameCanvas.height = 0;
+                reactionCtx.clearRect(0, 0, 0, 0); // 캔버스 내용 초기화
+                floatingTexts = []; // 플로팅 텍스트 초기화
+            };
+        }
+
+        // --- 이벤트 리스너 등록 ---
+
+        // 홈 화면: 게임 선택 버튼 클릭 이벤트
+        gameSelectionButtons.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                if (!initializedAudio) { // 첫 버튼 클릭 시 Tone.js 초기화
+                    Tone.start();
+                    initializedAudio = true;
+                }
+                playClickSound(); // 게임 선택 버튼 클릭 소리
+
+                const gameType = event.target.dataset.gameType;
+                if (gameType === 'memory') {
+                    showScreen('memory-game-screen');
+                    // 기억력 게임 선택 시 난이도 버튼은 보이게, 캔버스스는 숨기게
+                    memoryDifficultyButtons.style.display = 'flex'; // 난이도 버튼 보이기
+                    memoryGameCanvas.style.display = 'none'; // 캔버스 숨기기
+                    memoryGameInfo.style.display = 'none'; // 난이도 선택 화면에서 정보 숨기기
+                    memoryGameCanvas.width = 0; // 캔버스 크기 초기화
+                    memoryGameCanvas.height = 0;
+                    memoryCtx.clearRect(0, 0, 0, 0); // 캔버스 내용 초기화
+                    currentMemoryDifficulty = null; // 난이도 선택 전 초기화
+                } else if (gameType === 'reaction') {
+                    showScreen('reaction-game-screen');
+                    // 순발력 게임 선택 시, 난이도 버튼은 보이고 플레이 영역은 숨김
+                    reactionDifficultyButtons.style.display = 'flex';
+                    reactionGamePlayArea.style.display = 'none';
+                    reactionGameTitle.textContent = '순발력 번쩍 카드 클릭'; // 초기 제목 설정 (CSS로 숨겨짐)
+                    reactionGameCanvas.width = 0; // 캔버스 초기화
+                    reactionGameCanvas.height = 0;
+                    reactionCtx.clearRect(0, 0, 0, 0); // 캔버스 내용 초기화
+                    floatingTexts = []; // 새로운 게임 시작 시 플로팅 텍스트 초기화
+                } else if (gameType === 'gugudan') { // 구구단 게임 선택 시
+                    startGugudanGame();
+                }
+            }
+        });
+
+        // 기억력 게임 난이도 선택
+        memoryDifficultyButtons.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                const difficulty = event.target.dataset.difficulty;
+                startMemoryGame(difficulty);
+            }
+        });
+
+        // 순발력 게임 난이도 선택
+        reactionDifficultyButtons.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                const difficulty = event.target.dataset.difficulty;
+                startReactionGame(difficulty); // 게임 시작 함수 호출
+            }
+        });
+
+
+        // 기억력 게임 캔버스 클릭 및 터치 이벤트
+        memoryGameCanvas.addEventListener('click', handleMemoryCanvasInteraction);
+        memoryGameCanvas.addEventListener('touchend', handleMemoryCanvasInteraction, { passive: false });
+
+        // 순발력 게임 캔버스 클릭 및 터치 이벤트
+        reactionGameCanvas.addEventListener('click', handleReactionCanvasInteraction);
+        reactionGameCanvas.addEventListener('touchend', handleReactionCanvasInteraction, { passive: false });
+
+        // 기억력 게임: 다시 시작 버튼
+        memoryRestartButton.addEventListener('click', () => {
+            playClickSound(); // 다시 시작 버튼 클릭 소리
+            if (currentMemoryDifficulty) {
+                startMemoryGame(Object.keys(memoryDifficulties).find(key => memoryDifficulties[key] === currentMemoryDifficulty));
+            }
+        });
+
+        // 기억력 게임: 홈으로 버튼
+        memoryHomeButton.addEventListener('click', () => {
+            playClickSound(); // 홈으로 버튼 클릭 소리
+            showScreen('home-screen');
+            // 기억력 게임 화면 상태 초기화
+            memoryDifficultyButtons.style.display = 'flex'; // 난이도 버튼 보이기
+            memoryGameCanvas.style.display = 'none'; // 캔버스 숨기기
+            memoryGameInfo.style.display = 'none'; // 홈으로 갈 때 정보 숨기기
+            memoryGameCanvas.width = 0; // 캔버스 크기 초기화
+            memoryGameCanvas.height = 0;
+            memoryCtx.clearRect(0, 0, 0, 0); // 캔버스 내용 초기화
+            currentMemoryDifficulty = null; // 홈으로 갈 때 난이도 설정 초기화
+        });
+
+        // 순발력 게임: 다시 시작 버튼
+        reactionRestartButton.addEventListener('click', () => {
+            playClickSound(); // 다시 시작 버튼 클릭 소리
+            if (currentReactionDifficulty) {
+                // 게임 루프 중지 후 다시 시작
+                stopReactionGameLoop(); 
+                stopReactionAnimationLoop(); // 애니메이션 루프도 중지
+                startReactionGame(Object.keys(reactionDifficulties).find(key => reactionDifficulties[key] === currentReactionDifficulty));
+            }
+        });
+
+        // 순발력 게임: 홈으로 버튼
+        reactionHomeButton.addEventListener('click', () => {
+            playClickSound(); // 홈으로 버튼 클릭 소리
+            showScreen('home-screen');
+            stopReactionGameLoop(); // 홈으로 갈 때 루프 중지
+            stopReactionAnimationLoop(); // 애니메이션 루프 중지
+            // 순발력 게임 화면 초기화
+            reactionDifficultyButtons.style.display = 'flex'; // 난이도 버튼 다시 보이게
+            reactionGamePlayArea.style.display = 'none'; // 플레이 영역 숨기기
+            reactionGameCanvas.width = 0; // 캔버스 초기화
+            reactionGameCanvas.height = 0;
+            reactionCtx.clearRect(0, 0, 0, 0); // 캔버스 내용 초기화
+            floatingTexts = []; // 플로팅 텍스트 초기화
+        });
+
+        // 구구단 게임: 다시 시작 버튼
+        gugudanRestartButton.addEventListener('click', () => {
+            playClickSound(); // 다시 시작 버튼 클릭 소리
+            startGugudanGame();
+        });
+
+        // 구구단 게임: 홈으로 버튼
+        gugudanHomeButton.addEventListener('click', () => {
+            playClickSound(); // 홈으로 버튼 클릭 소리
+            showScreen('home-screen');
+        });
+
+
+        // 창 크기 변경 시 캔버스 및 게임 재조정
+        window.addEventListener('resize', () => {
+            if (currentActiveGameType === 'memory' && memoryGameScreen.classList.contains('active')) {
+                if (currentMemoryDifficulty) { // 게임이 활성화된 상태, 캔버스 크기 재조정 및 다시 그리기
+                    // Re-calculate canvas size on resize using the same logic as startMemoryGame
+                    const appHeight = document.getElementById('app').clientHeight;
+                    const appWidth = document.getElementById('app').clientWidth;
+                    const screenPaddingTop = 25; 
+
+                    const originalGameInfoDisplay = memoryGameInfo.style.display;
+                    memoryGameInfo.style.display = 'flex'; 
+                    const gameInfoHeight = memoryGameInfo.offsetHeight;
+                    memoryGameInfo.style.display = originalGameInfoDisplay; 
+
+                    const canvasMarginBottom = 25; 
+
+                    let availableVerticalSpaceForCanvas = appHeight - screenPaddingTop - gameInfoHeight - canvasMarginBottom;
+
+                    const currentDifficultyKey = Object.keys(memoryDifficulties).find(key => memoryDifficulties[key] === currentMemoryDifficulty);
+                    if (currentDifficultyKey === 'easy' || currentDifficultyKey === 'hard') {
+                        availableVerticalSpaceForCanvas -= BUTTON_VISIBILITY_REDUCTION;
+                    }
+
+                    const canvasRenderWidth = appWidth - (2 * CANVAS_HORIZONTAL_PADDING);
+                    
+                    const cardSpacing = 10;
+                    const tempCols = currentMemoryDifficulty.cols;
+                    const tempRows = currentMemoryDifficulty.rows;
+
+                    const idealCardWidth = (canvasRenderWidth - ((tempCols - 1) * cardSpacing)) / tempCols;
+                    const idealCardHeight = idealCardWidth; 
+
+                    let idealCanvasHeight = (tempRows * idealCardHeight) + ((tempRows - 1) * cardSpacing);
+
+                    let finalCanvasWidth = canvasRenderWidth;
+                    let finalCanvasHeight;
+
+                    if (idealCanvasHeight > availableVerticalSpaceForCanvas) {
+                        finalCanvasHeight = availableVerticalSpaceForCanvas;
+                        const newCardHeight = (finalCanvasHeight - ((tempRows - 1) * cardSpacing)) / tempRows;
+                        const newCardWidth = newCardHeight; 
+                        finalCanvasWidth = (tempCols * newCardWidth) + ((tempCols - 1) * cardSpacing);
+                    } else {
+                        finalCanvasHeight = idealCanvasHeight;
+                    }
+
+                    memoryGameCanvas.width = finalCanvasWidth;
+                    memoryGameCanvas.height = finalCanvasHeight;
+                    
+                    drawMemoryGame(); // Redraw with new canvas size
+                } else { 
+                    memoryDifficultyButtons.style.display = 'flex';
+                    memoryGameCanvas.style.display = 'none';
+                    memoryGameInfo.style.display = 'none'; 
+                    memoryGameCanvas.width = 0;
+                    memoryGameCanvas.height = 0;
+                    memoryCtx.clearRect(0, 0, 0, 0);
+                }
+            } else if (currentActiveGameType === 'reaction' && reactionGameScreen.classList.contains('active') && currentReactionDifficulty) {
+                 // 순발력 게임은 난이도 버튼 숨김 상태 유지
+                 reactionDifficultyButtons.style.display = 'none'; 
+                 reactionGamePlayArea.style.display = 'flex'; 
+                 // 현재 진행 중인 게임 상태를 유지하면서 캔버스 크기만 재조정
+
+                 // 반응형 캔버스 크기 조정 로직 (startReactionGame과 동일하게)
+                 const appHeight = document.getElementById('app').clientHeight;
+                 const appWidth = document.getElementById('app').clientWidth;
+                 const screenPaddingTop = 25; 
+
+                 const originalGameInfoDisplay = reactionGameInfo.style.display;
+                 reactionGameInfo.style.display = 'flex'; 
+                 const gameInfoHeight = reactionGameInfo.offsetHeight;
+                 reactionGameInfo.style.display = originalGameInfoDisplay; 
+
+                 const canvasMarginBottom = 25; 
+
+                 const availableVerticalSpaceForCanvas = appHeight - screenPaddingTop - gameInfoHeight - canvasMarginBottom;
+                 
+                 const canvasRenderWidth = appWidth - (2 * CANVAS_HORIZONTAL_PADDING);
+                 
+                 const cardSpacing = 10;
+                 const tempCols = currentReactionDifficulty.cols;
+                 const tempRows = currentReactionDifficulty.rows;
+
+                 const idealCardWidth = (canvasRenderWidth - ((tempCols - 1) * cardSpacing)) / tempCols;
+                 const idealCardHeight = idealCardWidth; 
+
+                 let idealCanvasHeight = (tempRows * idealCardHeight) + ((tempRows - 1) * cardSpacing);
+
+                 let finalCanvasWidth = canvasRenderWidth;
+                 let finalCanvasHeight;
+
+                 if (idealCanvasHeight > availableVerticalSpaceForCanvas) {
+                     finalCanvasHeight = availableVerticalSpaceForCanvas;
+                     const newCardHeight = (finalCanvasHeight - ((tempRows - 1) * cardSpacing)) / tempRows;
+                     const newCardWidth = newCardHeight; 
+                     finalCanvasWidth = (tempCols * newCardWidth) + ((tempCols - 1) * cardSpacing);
+                 } else {
+                     finalCanvasHeight = idealCanvasHeight;
+                 }
+
+                 reactionGameCanvas.width = finalCanvasWidth;
+                 reactionGameCanvas.height = finalCanvasHeight;
+                 
+                 // 기존 루프를 중지하고 새 루프 시작
+                 stopReactionGameLoop();
+                 stopReactionAnimationLoop(); // 애니메이션 루프도 중지
+                 // 재조정된 캔버스에 다시 그리고, 애니메이션 루프 다시 시작
+                 startReactionAnimationLoop(); 
+                 startReactionGameLoop(); 
+            }
+        });
+
+        // 초기 로드 시 홈 화면으로
+        window.onload = () => {
+            showScreen('home-screen');
+        };
+        // JavaScript 끝
+    </script>
+</body>
+</html>
